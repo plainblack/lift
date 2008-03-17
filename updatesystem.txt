@@ -1,0 +1,166 @@
+use case:
+  - user wants updates
+  - user wants to check for updates
+  - offline user wants updates
+  - developer has new patch
+
+channel:
+  - a product
+  - WRE
+  - WebGUI
+
+scope:
+  - major
+  - minor
+  - patch
+
+cli client:
+  list upgrades:
+    step:
+      - calculate patch level
+      - send to server
+      - server returns available
+  get upgrades:
+    option:
+      - get all
+      - specific patch
+      - jump to apply
+      - include scope
+    step:
+      - send to server
+      - server returns package
+  apply upgrades:
+    option:
+      - apply all
+      - apply specific
+      - use package
+    step:
+      - find available upgrades
+      - apply upgrade
+      - detect failure
+      - revert patch on failure
+      - abort on failure
+      - update meta file with new patch level
+  get patch level:
+    step:
+      - read meta file
+  extract package:
+    step:
+      - extract
+  reverse patch:
+    step:
+      - check if reversible
+      - reverse
+
+web client:
+  list available:
+    option:
+      - patch level
+      - branch
+      - product
+      - output format (html/json)
+    step:
+      - check caches
+      - calculate available
+      - cache data
+  get package:
+    option:
+      - patch level
+      - update list
+    step:
+      - add meta
+      - compress updates
+
+pbus_create_update.pl:
+  create skeleton:
+    option:
+      - --product
+      - --branch
+      - --revision
+    step:
+      - output meta
+      - output skeletons for each update type
+  send package:
+    step:
+      - compress
+      - send to server as post
+
+product meta file:
+  - update scope
+  - patch level
+
+upgrade meta file:
+  - patch number
+  - prereq listing
+  - patches w/type
+  - product
+  - scope
+
+server backend:
+  check available:
+    assert:
+      - dependencies will always be lower
+    step:
+      - select * from blah where id not in (list) and scope <= ?;
+      - follow tree to find valid
+
+
+database:
+  upgrades:
+    - id
+    - channel
+    - date
+    - prereqs
+    - scope
+    - file
+
+filesystem:
+  upgrades:
+    WebGUI:
+      - 1
+      - 2
+    WRE:
+      - 1
+      - 2
+
+
+PBUS
+  ::Product
+    ->new
+    ->channel
+    ->patch_level
+      bit string -> base64
+    ->patch_types
+    ::WRE
+      ->channel = 'WRE'
+    ::WebGUI
+      ->channel => 'WebGUI'
+    ::PBUS
+
+  ::Update
+    ->read_meta
+    ->patches
+    ->id
+    ->prereqs
+    ->apply
+  ::Patch
+    ->apply
+    ::Archive
+    ::Diff
+      ->revert
+    ::Perl
+    ::WebGUI
+      ::SQL
+      ::Package
+      ::Perl
+  ::Client
+    ->updates
+    ::Package
+      ->extract
+      ->updates
+  ::Server
+    ::Handler
+    ::Package
+      ->add_update
+      ->file
+
